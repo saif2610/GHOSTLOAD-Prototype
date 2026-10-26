@@ -1,920 +1,1203 @@
 
-from __future__ import annotations
+# ============================================================
+# GHOSTLOAD — Cloud Reliability & AI Workload Observatory
+# Complete Streamlit application
+# ============================================================
 
 import random
+import time
 from datetime import datetime
-from typing import Any
 
 import pandas as pd
 import streamlit as st
 
+
+# ------------------------- PAGE SETUP -------------------------
+
 st.set_page_config(
-    page_title="GHOSTLOAD | Reliability Lab",
-    page_icon="🛰️",
+    page_title="GHOSTLOAD | Cloud Observatory",
+    page_icon="☁️",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ----------------------------- VISUAL DESIGN -----------------------------
-st.markdown(
-    """
+
+# ------------------------- DESIGN SYSTEM ---------------------
+
+st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root {
+    --bg: #080b12;
+    --panel: #101621;
+    --panel2: #141d2b;
+    --border: #263348;
+    --cyan: #55e6ef;
+    --blue: #7599ff;
+    --muted: #94a3b8;
+    --white: #edf4ff;
+}
 
 .stApp {
-    color: #edf4ff;
     background:
-        radial-gradient(ellipse at 8% 0%, rgba(40,116,170,.20), transparent 34%),
-        radial-gradient(ellipse at 95% 8%, rgba(36,204,178,.12), transparent 30%),
-        #070b13;
-    font-family: 'Manrope', sans-serif;
+        radial-gradient(ellipse at 5% 0%, #14253b 0%, transparent 36%),
+        radial-gradient(ellipse at 95% 15%, #112b36 0%, transparent 27%),
+        var(--bg);
+    color: var(--white);
+    font-family: 'Space Grotesk', sans-serif;
 }
 
 [data-testid="stHeader"] {
-    background: rgba(7,11,19,.78);
+    background: rgba(8, 11, 18, 0.75);
 }
 
-.block-container {
-    max-width: 1480px;
-    padding-top: 1.5rem;
-    padding-bottom: 3rem;
+[data-testid="stSidebar"] {
+    background: #0b101a;
+    border-right: 1px solid var(--border);
 }
 
-section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg,#0b1422,#080d16);
-    border-right: 1px solid rgba(125,170,220,.15);
+h1, h2, h3, h4, p, label {
+    font-family: 'Space Grotesk', sans-serif;
 }
 
-.hero {
-    position: relative;
-    overflow: hidden;
-    padding: 2.2rem;
-    border-radius: 24px;
-    border: 1px solid rgba(119,177,224,.24);
-    background: linear-gradient(
-        115deg,
-        rgba(17,34,57,.96),
-        rgba(10,19,32,.91) 62%,
-        rgba(9,32,39,.88)
-    );
-    box-shadow: 0 18px 70px rgba(0,0,0,.18);
-    margin-bottom: 1.5rem;
-    animation: riseIn .75s ease both;
-}
-
-.hero:before {
-    content: '';
-    position: absolute;
-    inset: -80% -20%;
-    background: conic-gradient(
-        from 0deg,
-        transparent,
-        rgba(84,224,211,.08),
-        transparent 28%
-    );
-    animation: orbitGlow 16s linear infinite;
-    pointer-events: none;
-}
-
-.hero-content {
-    position: relative;
-    z-index: 1;
+h1 {
+    letter-spacing: -1.5px;
+    font-weight: 700;
 }
 
 .eyebrow {
-    color: #67e3d4;
-    font: 500 .72rem 'DM Mono', monospace;
-    letter-spacing: .2em;
+    color: var(--cyan);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
     text-transform: uppercase;
 }
 
-.hero h1 {
-    font-size: clamp(2.5rem, 6vw, 4.5rem);
-    letter-spacing: -.065em;
-    line-height: 1.05;
-    margin: .5rem 0 .8rem;
-    color: #f4f8ff;
-    font-weight: 800;
+.hero {
+    padding: 32px;
+    border: 1px solid #294052;
+    border-radius: 22px;
+    background:
+        linear-gradient(120deg, rgba(24, 46, 64, .94),
+        rgba(12, 18, 30, .97) 60%, rgba(17, 36, 47, .9));
+    position: relative;
+    overflow: hidden;
+    animation: appear .7s ease-out;
+    margin-bottom: 24px;
 }
 
-.hero h1 span {
-    color: #68e1d4;
+.hero:after {
+    content: "";
+    position: absolute;
+    right: -90px;
+    top: -130px;
+    width: 310px;
+    height: 310px;
+    border: 1px solid rgba(85, 230, 239, .25);
+    border-radius: 50%;
+    box-shadow:
+        0 0 0 28px rgba(85,230,239,.025),
+        0 0 0 58px rgba(85,230,239,.02),
+        0 0 90px rgba(85,230,239,.09);
+    pointer-events: none;
 }
 
-.hero p {
-    color: #b5c8dd;
-    max-width: 720px;
-    font-size: 1rem;
-    line-height: 1.8;
+.hero-title {
+    font-size: clamp(36px, 5vw, 62px);
+    font-weight: 700;
+    letter-spacing: -3px;
+    line-height: 1;
+    margin: 14px 0;
 }
 
-.hero-meta {
-    display: flex;
-    gap: .6rem;
-    flex-wrap: wrap;
-    margin-top: 1.3rem;
+.hero-title span {
+    color: var(--cyan);
 }
 
-.pill {
-    display: inline-block;
-    padding: .4rem .7rem;
-    border-radius: 999px;
-    border: 1px solid rgba(135,180,220,.2);
-    background: rgba(7,15,25,.5);
-    color: #c4d5e7;
-    font: .72rem 'DM Mono', monospace;
+.hero-subtitle {
+    color: #b3c2d6;
+    max-width: 650px;
+    font-size: 15px;
+    line-height: 1.7;
 }
 
-.section-kicker {
-    color: #68e1d4;
-    font: 500 .7rem 'DM Mono', monospace;
-    letter-spacing: .16em;
-    text-transform: uppercase;
-    margin-bottom: .4rem;
-}
-
-.glass-card {
-    border: 1px solid rgba(130,170,214,.17);
-    border-radius: 17px;
-    padding: 1rem 1.05rem;
-    background: linear-gradient(
-        145deg,
-        rgba(18,30,47,.88),
-        rgba(11,19,31,.8)
-    );
-    min-height: 125px;
-    transition: transform .22s ease, border-color .22s ease;
-    animation: riseIn .55s ease both;
-}
-
-.glass-card:hover {
-    transform: translateY(-3px);
-    border-color: rgba(96,225,212,.45);
-}
-
-.metric-label {
-    color: #8fa8c2;
-    font-size: .78rem;
-}
-
-.metric-value {
-    color: #f4f8ff;
-    font-size: 2rem;
-    font-weight: 800;
-    letter-spacing: -.05em;
-    margin: .25rem 0;
-}
-
-.metric-foot {
-    color: #829bb5;
-    font-size: .73rem;
-}
-
-.info-card {
-    border: 1px solid rgba(130,170,214,.16);
+.panel {
+    background: linear-gradient(145deg, #121b29, #0e1420);
+    border: 1px solid var(--border);
     border-radius: 16px;
-    background: rgba(14,24,38,.68);
-    padding: 1rem 1.1rem;
+    padding: 20px;
+    margin-bottom: 14px;
+    transition: border-color .2s ease, transform .2s ease;
 }
 
-.stButton button,
-.stDownloadButton button {
-    border-radius: 11px !important;
-    min-height: 2.7rem;
-    font-weight: 700 !important;
-    transition: transform .18s ease !important;
-}
-
-.stButton button:hover,
-.stDownloadButton button:hover {
+.panel:hover {
+    border-color: #42627b;
     transform: translateY(-2px);
 }
 
-.stButton button[kind="primary"] {
-    background: linear-gradient(100deg,#69e5d6,#8cebd6) !important;
-    color: #07131b !important;
-    border: 0 !important;
+.metric-label {
+    color: var(--muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
-[data-testid="stMetric"] {
-    background: rgba(17,28,44,.72);
-    border: 1px solid rgba(130,170,214,.16);
-    padding: 13px 16px;
-    border-radius: 14px;
+.metric-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 29px;
+    color: var(--white);
+    font-weight: 500;
+    margin: 9px 0 4px;
+}
+
+.metric-note {
+    color: var(--cyan);
+    font-size: 12px;
+}
+
+.section-label {
+    color: var(--cyan);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.small-muted {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.65;
+}
+
+.status-pill {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid #315364;
+    color: var(--cyan);
+    background: rgba(85,230,239,.06);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+}
+
+.node {
+    display: inline-block;
+    border: 1px solid #2e5066;
+    background: #101e2c;
+    padding: 10px 13px;
+    border-radius: 10px;
+    color: #dcecff;
+    font-size: 12px;
+    text-align: center;
+    min-width: 100px;
+}
+
+.node-line {
+    color: var(--cyan);
+    text-align: center;
+    font-size: 20px;
+    padding: 3px;
+}
+
+div[data-testid="stMetric"] {
+    background: #101824;
+    border: 1px solid var(--border);
+    padding: 14px;
+    border-radius: 13px;
+}
+
+.stButton > button {
+    border-radius: 10px;
+    border: 1px solid #3a6576;
+    background: linear-gradient(110deg, #173849, #142938);
+    color: #e9fcff;
+    font-weight: 600;
+    transition: all .2s ease;
+}
+
+.stButton > button:hover {
+    border-color: var(--cyan);
+    color: white;
+    box-shadow: 0 0 18px rgba(85,230,239,.13);
+}
+
+.stDownloadButton > button {
+    border-radius: 10px;
+    background: #13202d;
+    border: 1px solid #2f5265;
+    color: #e9fcff;
+}
+
+.stTabs [data-baseweb="tab-list"] {
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.stTabs [data-baseweb="tab"] {
+    background: transparent;
+    border-radius: 9px 9px 0 0;
+    color: #a6b4c8;
+    padding: 12px 15px;
+}
+
+.stTabs [aria-selected="true"] {
+    color: var(--cyan) !important;
+    border-bottom: 2px solid var(--cyan);
 }
 
 hr {
-    border-color: rgba(130,170,214,.14);
+    border-color: var(--border);
 }
 
-footer {
-    visibility: hidden;
-}
-
-@keyframes riseIn {
-    from {
-        opacity: 0;
-        transform: translateY(12px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes orbitGlow {
-    to {
-        transform: rotate(360deg);
-    }
+@keyframes appear {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
+    * {
         animation: none !important;
         transition: none !important;
     }
 }
 </style>
-""",
-    unsafe_allow_html=True,
-)
-
-# ----------------------------- SIMULATION ENGINE -----------------------------
-def simulate_run(
-    order_count: int,
-    traffic_level: str,
-    outage_probability: float,
-    latency_ms: int,
-    retry_mode: str,
-    idempotency: bool,
-    seed: int,
-) -> pd.DataFrame:
-    """Generate reproducible synthetic transaction records."""
-
-    rng = random.Random(seed)
-
-    traffic_factors = {
-        "Low": 0.75,
-        "Moderate": 1.0,
-        "High": 1.55,
-    }
-
-    retry_limits = {
-        "No retries": 0,
-        "One retry": 1,
-        "Up to 2 retries": 2,
-    }
-
-    traffic_factor = traffic_factors[traffic_level]
-    retry_limit = retry_limits[retry_mode]
-    rows: list[dict[str, Any]] = []
-
-    for i in range(1, order_count + 1):
-        base_latency = max(
-            35,
-            int(rng.gauss(230 * traffic_factor, 65 * traffic_factor)),
-        )
-
-        outage = rng.random() < outage_probability
-
-        timeout_chance = min(
-            0.70,
-            max(0.0, (base_latency + latency_ms - 650) / 2100),
-        )
-
-        timeout = outage or rng.random() < timeout_chance
-
-        retries = retry_limit if timeout else 0
-        attempts = 1 + retries
-
-        if not timeout:
-            recovered = True
-        elif retry_limit == 0:
-            recovered = False
-        else:
-            recovery_chance = {1: 0.70, 2: 0.86}[retry_limit]
-            recovered = rng.random() < recovery_chance
-
-        status = "Completed" if recovered else "Failed"
-
-        final_latency = (
-            base_latency
-            + latency_ms
-            + sum(rng.randint(150, 420) for _ in range(retries))
-        )
-
-        duplicate = False
-
-        if recovered and retries > 0 and not idempotency:
-            duplicate_chance = min(
-                0.55,
-                0.13 * retries + outage_probability * 0.55,
-            )
-            duplicate = rng.random() < duplicate_chance
-
-        rows.append({
-            "Transaction": f"ORD-{i:04d}",
-            "Traffic": traffic_level,
-            "Simulated latency (ms)": int(final_latency),
-            "Connection interruption": "Yes" if outage else "No",
-            "Attempts": attempts,
-            "Status": status,
-            "Duplicate risk": (
-                "Detected" if duplicate else "None detected"
-            ),
-            "Idempotency protection": (
-                "On" if idempotency else "Off"
-            ),
-        })
-
-    return pd.DataFrame(rows)
+""", unsafe_allow_html=True)
 
 
-def metric_card(label: str, value: str, foot: str) -> str:
-    return (
-        "<div class='glass-card'>"
-        f"<div class='metric-label'>{label}</div>"
-        f"<div class='metric-value'>{value}</div>"
-        f"<div class='metric-foot'>{foot}</div>"
-        "</div>"
-    )
+# ------------------------- HELPERS ---------------------------
 
-
-def get_metrics(frame: pd.DataFrame) -> dict[str, float | int]:
-    total = len(frame)
-
-    completed = int((frame["Status"] == "Completed").sum())
-    failed = total - completed
-    duplicates = int(
-        (frame["Duplicate risk"] == "Detected").sum()
-    )
-
-    average_latency = (
-        float(frame["Simulated latency (ms)"].mean())
-        if total else 0.0
-    )
-
-    p95_latency = (
-        float(frame["Simulated latency (ms)"].quantile(0.95))
-        if total else 0.0
-    )
-
-    return {
-        "total": total,
-        "completed": completed,
-        "failed": failed,
-        "duplicates": duplicates,
-        "success_rate": (
-            100 * completed / total if total else 0.0
-        ),
-        "average_latency": average_latency,
-        "p95_latency": p95_latency,
-    }
-
-
-# ----------------------------- SIDEBAR CONTROLS -----------------------------
-with st.sidebar:
+def metric_card(label, value, note="SIMULATED"):
     st.markdown(
-        "<div class='eyebrow'>SYSTEM CONTROL</div>",
+        f"""
+        <div class="panel">
+            <div class="metric-label">{label}</div>
+            <div class="metric-value">{value}</div>
+            <div class="metric-note">{note}</div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
-    st.markdown("# 🛰️ GHOSTLOAD")
-    st.caption("Workflow resilience • Research prototype")
-    st.divider()
 
-    st.markdown("### Configure an experiment")
+def run_simulation(
+    request_count,
+    interruption_probability,
+    base_latency,
+    max_retries,
+    idempotency,
+    seed,
+):
+    """Simulate request outcomes. This does not send real network requests."""
 
-    order_count = st.slider(
-        "Simulated transactions",
-        min_value=25,
-        max_value=500,
-        value=150,
-        step=25,
+    rng = random.Random(seed)
+    records = []
+
+    for request_id in range(1, request_count + 1):
+        attempts = 0
+        duplicate_operations = 0
+        completed = False
+        response_lost = False
+        total_latency = 0
+        final_status = "FAILED"
+        failure_reason = "Retry limit reached"
+
+        for attempt in range(max_retries + 1):
+            attempts += 1
+
+            latency = max(
+                5,
+                int(rng.gauss(base_latency, max(5, base_latency * 0.18))),
+            )
+            total_latency += latency
+
+            interrupted = rng.random() < interruption_probability
+
+            if not interrupted:
+                completed = True
+                final_status = "SUCCESS"
+                failure_reason = ""
+                break
+
+            # Sometimes the server processes a request but the response
+            # is lost. Retrying can then repeat the operation.
+            server_processed = rng.random() < 0.55
+
+            if server_processed:
+                response_lost = True
+
+                if attempt < max_retries:
+                    if not idempotency:
+                        duplicate_operations += 1
+                    continue
+
+                # The operation may have happened, but the client
+                # never received a successful response.
+                final_status = "UNKNOWN"
+                failure_reason = "Response lost; processing uncertain"
+                break
+
+            # The request did not complete on the server.
+            if attempt < max_retries:
+                continue
+
+            final_status = "FAILED"
+            failure_reason = "Service interruption"
+
+        records.append({
+            "Request ID": f"REQ-{request_id:05d}",
+            "Attempts": attempts,
+            "Latency (ms)": total_latency,
+            "Status": final_status,
+            "Response Lost": response_lost,
+            "Duplicate Operations": duplicate_operations,
+            "Idempotency": "ON" if idempotency else "OFF",
+            "Failure Reason": failure_reason,
+        })
+
+    return pd.DataFrame(records)
+
+
+def calculate_metrics(data):
+    total = len(data)
+
+    if total == 0:
+        return {
+            "success_rate": 0,
+            "failure_rate": 0,
+            "unknown_rate": 0,
+            "duplicates": 0,
+            "avg_latency": 0,
+            "avg_attempts": 0,
+        }
+
+    successes = int((data["Status"] == "SUCCESS").sum())
+    failures = int((data["Status"] == "FAILED").sum())
+    unknown = int((data["Status"] == "UNKNOWN").sum())
+
+    return {
+        "success_rate": successes / total * 100,
+        "failure_rate": failures / total * 100,
+        "unknown_rate": unknown / total * 100,
+        "duplicates": int(data["Duplicate Operations"].sum()),
+        "avg_latency": float(data["Latency (ms)"].mean()),
+        "avg_attempts": float(data["Attempts"].mean()),
+    }
+
+
+def make_strategy_table(count, interruption, latency, seed):
+    """Compare retry and idempotency strategies using common settings."""
+
+    strategies = [
+        ("No retries", 0, False),
+        ("One retry", 1, False),
+        ("Two retries", 2, False),
+        ("Two retries + idempotency", 2, True),
+    ]
+
+    results = []
+
+    for name, retries, idem in strategies:
+        data = run_simulation(
+            request_count=count,
+            interruption_probability=interruption,
+            base_latency=latency,
+            max_retries=retries,
+            idempotency=idem,
+            seed=seed,
+        )
+
+        m = calculate_metrics(data)
+
+        results.append({
+            "Strategy": name,
+            "Success rate (%)": round(m["success_rate"], 2),
+            "Failure rate (%)": round(m["failure_rate"], 2),
+            "Unknown outcomes (%)": round(m["unknown_rate"], 2),
+            "Duplicate operations": m["duplicates"],
+            "Average latency (ms)": round(m["avg_latency"], 1),
+            "Average attempts": round(m["avg_attempts"], 2),
+        })
+
+    return pd.DataFrame(results)
+
+
+# ------------------------- SIDEBAR ---------------------------
+
+with st.sidebar:
+    st.markdown(
+        '<div class="eyebrow">GHOSTLOAD / CONTROL DECK</div>',
+        unsafe_allow_html=True,
     )
 
-    traffic_level = st.select_slider(
-        "Traffic intensity",
-        options=["Low", "Moderate", "High"],
-        value="Moderate",
+    st.markdown("## Experiment setup")
+    st.caption("Configure the simulated test environment.")
+
+    request_count = st.slider(
+        "Number of requests",
+        min_value=100,
+        max_value=5000,
+        value=1000,
+        step=100,
     )
 
-    outage_pct = st.slider(
-        "Connection interruption chance",
-        min_value=0,
-        max_value=60,
-        value=15,
-        step=5,
+    interruption_probability = st.slider(
+        "Connection interruption probability",
+        min_value=0.0,
+        max_value=0.8,
+        value=0.15,
+        step=0.05,
+        format="%.2f",
+        help="Probability that an individual request attempt is interrupted.",
     )
 
-    latency_ms = st.slider(
-        "Added network latency",
-        min_value=0,
-        max_value=2000,
-        value=250,
-        step=50,
-        help="Synthetic latency added to each simulated request.",
+    base_latency = st.slider(
+        "Base request latency (ms)",
+        min_value=20,
+        max_value=1000,
+        value=120,
+        step=20,
     )
 
-    retry_mode = st.selectbox(
+    max_retries = st.selectbox(
         "Retry policy",
-        ["No retries", "One retry", "Up to 2 retries"],
+        options=[0, 1, 2, 3],
+        index=2,
+        format_func=lambda n: "No retries" if n == 0 else f"{n} retries",
     )
 
-    idempotency = st.toggle(
+    idempotency = st.checkbox(
         "Enable idempotency protection",
         value=True,
-        help="Models protection against repeated side effects on retries.",
+        help=(
+            "Models a safeguard that prevents a retried operation "
+            "from being applied more than once."
+        ),
     )
 
     seed = st.number_input(
         "Experiment seed",
         min_value=1,
-        max_value=99999,
+        max_value=999999,
         value=42,
         step=1,
     )
 
-    run_button = st.button(
-        "▶ RUN EXPERIMENT",
-        type="primary",
-        use_container_width=True,
-    )
-
-    reset_button = st.button(
-        "Reset to default settings",
-        use_container_width=True,
-    )
-
     st.divider()
 
+    st.markdown("### Test profile")
     st.markdown(
-        "<span class='pill'>LOCAL SYNTHETIC MODE</span>",
+        """
+        <div class="panel">
+            <div class="section-label">Execution mode</div>
+            <div style="font-size:15px;font-weight:600;">
+                Local simulation
+            </div>
+            <p class="small-muted">
+                No real requests, payments, or cloud services are affected.
+            </p>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
-    st.caption(
-        "No live service is contacted. This prototype does not change "
-        "your network or create real transactions."
-    )
+    if st.button("↻ Generate new experiment", use_container_width=True):
+        st.session_state["experiment_seed"] = (
+            int(st.session_state.get("experiment_seed", seed)) + 1
+        )
+        st.rerun()
 
 
-if reset_button:
-    st.session_state.clear()
-    st.rerun()
+# Keep experiment data stable between normal Streamlit reruns.
+effective_seed = int(st.session_state.get("experiment_seed", seed))
+
+if st.session_state.get("last_seed") != effective_seed:
+    st.session_state["last_seed"] = effective_seed
+
+data = run_simulation(
+    request_count=request_count,
+    interruption_probability=interruption_probability,
+    base_latency=base_latency,
+    max_retries=max_retries,
+    idempotency=idempotency,
+    seed=effective_seed,
+)
+
+metrics = calculate_metrics(data)
+strategy_data = make_strategy_table(
+    count=min(request_count, 2000),
+    interruption=interruption_probability,
+    latency=base_latency,
+    seed=effective_seed,
+)
 
 
-# ----------------------------- HERO HEADER -----------------------------
+# ------------------------- HEADER ----------------------------
+
 st.markdown(
     """
-<div class="hero">
-  <div class="hero-content">
-    <div class="eyebrow">RELIABILITY ENGINEERING · PROTOTYPE 0.2</div>
-    <h1>GHOST<span>LOAD</span></h1>
-    <p>
-      Stress the workflow. Expose the weak points. Measure what happens
-      when connectivity gets unreliable.
-    </p>
-    <div class="hero-meta">
-      <span class="pill">FAULT SIMULATION</span>
-      <span class="pill">RETRY ANALYSIS</span>
-      <span class="pill">TRANSACTION INTEGRITY</span>
-      <span class="pill">REPRODUCIBLE RUNS</span>
+    <div class="hero">
+        <div class="eyebrow">CLOUD RELIABILITY / AI WORKLOADS / RESILIENCE</div>
+        <div class="hero-title">GHOST<span>LOAD</span></div>
+        <div class="hero-subtitle">
+            A cloud reliability observatory for exploring service failures,
+            request recovery, workload pressure, and the behaviour of
+            retry strategies in controlled experiments.
+        </div>
+        <br>
+        <span class="status-pill">● SIMULATION ENGINE ACTIVE</span>
+        &nbsp;
+        <span class="status-pill">LOCAL EXPERIMENT</span>
     </div>
-  </div>
-</div>
-""",
+    """,
     unsafe_allow_html=True,
 )
 
-
-# ----------------------------- RUN EXPERIMENT -----------------------------
-if "results" not in st.session_state:
-    st.session_state.results = None
-
-if "run_meta" not in st.session_state:
-    st.session_state.run_meta = None
-
-if run_button or st.session_state.results is None:
-    with st.spinner("Running synthetic fault scenarios..."):
-        generated = simulate_run(
-            order_count=order_count,
-            traffic_level=traffic_level,
-            outage_probability=outage_pct / 100.0,
-            latency_ms=latency_ms,
-            retry_mode=retry_mode,
-            idempotency=idempotency,
-            seed=int(seed),
-        )
-
-        st.session_state.results = generated
-
-        st.session_state.run_meta = {
-            "transactions": order_count,
-            "traffic": traffic_level,
-            "outage": outage_pct,
-            "latency": latency_ms,
-            "retry": retry_mode,
-            "idempotency": idempotency,
-            "timestamp": datetime.now().strftime(
-                "%Y-%m-%d %H:%M:%S"
-            ),
-            "seed": int(seed),
-        }
-
-
-df = st.session_state.results
-meta = st.session_state.run_meta or {}
-metrics = get_metrics(df)
-
-
-# ----------------------------- WORKSPACE TABS -----------------------------
 st.markdown(
-    "<div class='section-kicker'>LIVE WORKSPACE</div>",
+    f"""
+    <div class="small-muted">
+        Experiment seed: <b>{effective_seed}</b>
+        &nbsp;·&nbsp; Requests: <b>{request_count:,}</b>
+        &nbsp;·&nbsp; Generated: <b>{datetime.now().strftime("%d %b %Y, %H:%M:%S")}</b>
+    </div>
+    """,
     unsafe_allow_html=True,
 )
 
-tab_overview, tab_evidence, tab_compare, tab_method = st.tabs([
-    "◈ Command overview",
-    "▤ Transaction evidence",
-    "⇄ Strategy comparison",
-    "ⓘ Research notes",
+st.write("")
+
+
+# ------------------------- TABS ------------------------------
+
+overview, evidence, strategy, cloud, methodology = st.tabs([
+    "◈  Overview",
+    "▤  Request evidence",
+    "⇄  Strategy lab",
+    "☁  Cloud lab",
+    "ⓘ  Methodology",
 ])
 
 
-# ----------------------------- OVERVIEW -----------------------------
-with tab_overview:
-    st.markdown("### Experiment snapshot")
+# ============================================================
+# TAB 1: OVERVIEW
+# ============================================================
 
+with overview:
+    st.markdown("## System overview")
     st.caption(
-        "Synthetic results only. Change controls in the sidebar "
-        "and run another experiment to update the results."
+        "A quick view of the current simulated reliability experiment."
     )
 
-    c1, c2, c3, c4 = st.columns(4, gap="medium")
+    a, b, c, d = st.columns(4)
 
-    with c1:
-        st.markdown(
-            metric_card(
-                "COMPLETION RATE",
-                f"{metrics['success_rate']:.1f}%",
-                f"{metrics['completed']:,} completed",
-            ),
-            unsafe_allow_html=True,
+    with a:
+        metric_card(
+            "Successful requests",
+            f"{metrics['success_rate']:.1f}%",
+            "Final status = SUCCESS",
         )
 
-    with c2:
-        st.markdown(
-            metric_card(
-                "FAILED TRANSACTIONS",
-                f"{metrics['failed']:,}",
-                f"{100 * metrics['failed'] / metrics['total']:.1f}% "
-                "of simulated total",
-            ),
-            unsafe_allow_html=True,
+    with b:
+        metric_card(
+            "Failed requests",
+            f"{metrics['failure_rate']:.1f}%",
+            "Final status = FAILED",
         )
 
-    with c3:
-        st.markdown(
-            metric_card(
-                "DUPLICATE FLAGS",
-                f"{metrics['duplicates']:,}",
-                "Potential repeated side effects",
-            ),
-            unsafe_allow_html=True,
+    with c:
+        metric_card(
+            "Average latency",
+            f"{metrics['avg_latency']:.0f} ms",
+            "Total simulated request time",
         )
 
-    with c4:
-        st.markdown(
-            metric_card(
-                "AVG. LATENCY",
-                f"{metrics['average_latency']:,.0f} ms",
-                f"95th percentile: {metrics['p95_latency']:,.0f} ms",
-            ),
-            unsafe_allow_html=True,
+    with d:
+        metric_card(
+            "Duplicate operations",
+            f"{metrics['duplicates']:,}",
+            "Modelled repeated processing",
         )
 
-    st.markdown("### Outcome telemetry")
+    st.write("")
 
-    chart_col, notes_col = st.columns(
-        [1.15, 0.85],
-        gap="large",
-    )
+    left, right = st.columns([1.35, 1])
 
-    with chart_col:
-        outcome = (
-            df["Status"]
+    with left:
+        st.markdown("### Request outcome distribution")
+
+        outcome_counts = (
+            data["Status"]
             .value_counts()
-            .reindex(["Completed", "Failed"], fill_value=0)
-            .rename_axis("Outcome")
-            .reset_index(name="Transactions")
+            .reindex(["SUCCESS", "FAILED", "UNKNOWN"], fill_value=0)
         )
 
-        st.bar_chart(
-            outcome.set_index("Outcome"),
-            height=265,
-            use_container_width=True,
-        )
+        outcome_df = pd.DataFrame({
+            "Outcome": outcome_counts.index,
+            "Requests": outcome_counts.values,
+        }).set_index("Outcome")
 
-    with notes_col:
+        st.bar_chart(outcome_df, height=300)
+
+    with right:
+        st.markdown("### Current configuration")
+
         st.markdown(
-            "<div class='info-card'>"
-            "<div class='section-kicker'>AUTOMATED OBSERVATIONS</div>",
+            f"""
+            <div class="panel">
+                <div class="section-label">Network model</div>
+                <div class="metric-value" style="font-size:22px;">
+                    {interruption_probability * 100:.0f}%
+                </div>
+                <p class="small-muted">Interruption probability per attempt</p>
+                <hr>
+                <div class="section-label">Retry policy</div>
+                <div style="font-size:18px;font-weight:600;">
+                    {max_retries} retries
+                </div>
+                <hr>
+                <div class="section-label">Idempotency protection</div>
+                <div style="font-size:18px;font-weight:600;">
+                    {"Enabled" if idempotency else "Disabled"}
+                </div>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
 
-        if metrics["failed"]:
-            st.warning(
-                f"{metrics['failed']} transaction(s) failed in this "
-                "synthetic run. Compare retry policies to study recovery."
-            )
-        else:
-            st.success(
-                "All simulated transactions completed in this run. "
-                "Try increasing the interruption chance."
-            )
+    st.markdown("### Request latency profile")
 
-        if metrics["duplicates"]:
-            st.error(
-                f"{metrics['duplicates']} completed transaction(s) "
-                "were flagged for possible duplicate side effects."
-            )
-        elif (
-            not bool(meta.get("idempotency", True))
-            and meta.get("retry") != "No retries"
-        ):
-            st.info(
-                "No duplicate flags appeared in this sample, but "
-                "retries without idempotency can still be risky."
-            )
-        else:
-            st.info(
-                "No duplicate side effects were generated in this sample. "
-                "This does not prove real-world safety."
-            )
+    latency_df = data[["Request ID", "Latency (ms)"]].copy()
+    latency_df["Request number"] = range(1, len(latency_df) + 1)
 
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown("### Run configuration")
-
-    if meta:
-        a, b, c = st.columns(3)
-
-        a.markdown(
-            f"**Transactions:** {meta.get('transactions', '—')}  \n"
-            f"**Traffic intensity:** {meta.get('traffic', '—')}  \n"
-            f"**Random seed:** `{meta.get('seed', '—')}`"
-        )
-
-        b.markdown(
-            f"**Interruption chance:** {meta.get('outage', '—')}%  \n"
-            f"**Added latency:** {meta.get('latency', '—')} ms"
-        )
-
-        c.markdown(
-            f"**Retry policy:** {meta.get('retry', '—')}  \n"
-            f"**Idempotency:** "
-            f"{'Enabled' if meta.get('idempotency') else 'Disabled'}"
-        )
-
-        st.caption(
-            f"Last experiment: {meta.get('timestamp', '—')}"
-        )
-
-
-# ----------------------------- TRANSACTION EVIDENCE -----------------------------
-with tab_evidence:
-    st.markdown("### Transaction-level evidence")
-
-    st.write(
-        "Inspect generated records, filter potential failure modes, "
-        "and export the experiment results."
+    st.line_chart(
+        latency_df.set_index("Request number")[["Latency (ms)"]],
+        height=260,
     )
 
-    f1, f2, f3 = st.columns([1, 1, 1.4])
+    st.markdown("### Request processing flow")
 
-    with f1:
-        selected_status = st.multiselect(
-            "Outcome",
-            ["Completed", "Failed"],
-            default=["Completed", "Failed"],
+    flow1, flow2, flow3, flow4 = st.columns(4)
+
+    with flow1:
+        st.markdown(
+            '<div class="node">01<br>Request created</div>',
+            unsafe_allow_html=True,
         )
 
-    with f2:
-        duplicate_filter = st.selectbox(
-            "Duplicate risk",
-            ["All records", "Detected only", "None detected"],
+    with flow2:
+        st.markdown(
+            '<div class="node">02<br>Failure simulated</div>',
+            unsafe_allow_html=True,
         )
 
-    with f3:
-        search_text = st.text_input(
-            "Find transaction ID",
-            placeholder="e.g. ORD-0012",
+    with flow3:
+        st.markdown(
+            '<div class="node">03<br>Retry decision</div>',
+            unsafe_allow_html=True,
         )
 
-    evidence = df[df["Status"].isin(selected_status)]
+    with flow4:
+        st.markdown(
+            '<div class="node">04<br>Outcome recorded</div>',
+            unsafe_allow_html=True,
+        )
 
-    if duplicate_filter == "Detected only":
-        evidence = evidence[
-            evidence["Duplicate risk"] == "Detected"
-        ]
-    elif duplicate_filter == "None detected":
-        evidence = evidence[
-            evidence["Duplicate risk"] == "None detected"
-        ]
+    st.info(
+        "Interpretation: retries can improve the chance of receiving a "
+        "successful response, but can add latency. Idempotency is modelled "
+        "as protection against duplicate operations. These are simulated "
+        "results, not measurements from a production system."
+    )
 
-    if search_text.strip():
-        evidence = evidence[
-            evidence["Transaction"].str.contains(
-                search_text.strip(),
+
+# ============================================================
+# TAB 2: REQUEST EVIDENCE
+# ============================================================
+
+with evidence:
+    st.markdown("## Request-level evidence")
+    st.caption(
+        "Inspect individual simulated requests and export the experiment data."
+    )
+
+    search_term = st.text_input(
+        "Search request ID",
+        placeholder="Example: REQ-00025",
+    )
+
+    status_filter = st.multiselect(
+        "Filter by final status",
+        options=["SUCCESS", "FAILED", "UNKNOWN"],
+        default=["SUCCESS", "FAILED", "UNKNOWN"],
+    )
+
+    filtered = data[data["Status"].isin(status_filter)].copy()
+
+    if search_term.strip():
+        filtered = filtered[
+            filtered["Request ID"].str.contains(
+                search_term.strip(),
                 case=False,
-                na=False,
+                regex=False,
             )
         ]
 
-    st.caption(f"Showing {len(evidence):,} of {len(df):,} records")
+    st.markdown(
+        f"**Showing {len(filtered):,} of {len(data):,} requests**"
+    )
 
     st.dataframe(
-        evidence,
+        filtered,
         use_container_width=True,
         hide_index=True,
-        height=360,
+        height=420,
     )
 
-    csv_data = df.to_csv(index=False).encode("utf-8")
+    csv_data = filtered.to_csv(index=False).encode("utf-8")
 
     st.download_button(
-        "⬇ Download full transaction evidence (CSV)",
+        "⬇ Download filtered request evidence (CSV)",
         data=csv_data,
-        file_name="ghostload_simulation_results.csv",
+        file_name="ghostload_request_evidence.csv",
         mime="text/csv",
         use_container_width=True,
     )
 
-    st.markdown("### Latency profile")
+    st.markdown("### Evidence summary")
 
-    st.line_chart(
-        df.set_index("Transaction")[["Simulated latency (ms)"]],
-        height=260,
-        use_container_width=True,
-    )
+    e1, e2, e3 = st.columns(3)
 
+    with e1:
+        st.metric("Requests in view", f"{len(filtered):,}")
 
-# ----------------------------- STRATEGY COMPARISON -----------------------------
-with tab_compare:
-    st.markdown("### Compare retry and integrity strategies")
-
-    st.caption(
-        "Each strategy uses the same experiment seed and settings "
-        "to make the synthetic comparison reproducible."
-    )
-
-    strategies = [
-        ("No retries · no guard", "No retries", False),
-        ("One retry · no guard", "One retry", False),
-        ("Up to 2 retries · no guard", "Up to 2 retries", False),
-        ("Up to 2 retries · idempotency", "Up to 2 retries", True),
-    ]
-
-    comparison_rows: list[dict[str, Any]] = []
-
-    for label, strategy_retry, strategy_idempotency in strategies:
-        strategy_df = simulate_run(
-            order_count=int(meta.get("transactions", order_count)),
-            traffic_level=str(meta.get("traffic", traffic_level)),
-            outage_probability=float(
-                meta.get("outage", outage_pct)
-            ) / 100.0,
-            latency_ms=int(meta.get("latency", latency_ms)),
-            retry_mode=strategy_retry,
-            idempotency=strategy_idempotency,
-            seed=int(meta.get("seed", seed)),
+    with e2:
+        st.metric(
+            "Response-loss events",
+            int(filtered["Response Lost"].sum()) if len(filtered) else 0,
         )
 
-        strategy_metrics = get_metrics(strategy_df)
+    with e3:
+        st.metric(
+            "Duplicate operations",
+            int(filtered["Duplicate Operations"].sum()) if len(filtered) else 0,
+        )
 
-        comparison_rows.append({
-            "Strategy": label,
-            "Completion rate (%)": round(
-                float(strategy_metrics["success_rate"]), 1
-            ),
-            "Failed": int(strategy_metrics["failed"]),
-            "Duplicate flags": int(strategy_metrics["duplicates"]),
-            "Average latency (ms)": round(
-                float(strategy_metrics["average_latency"])
-            ),
-        })
+    st.caption(
+        "CSV exports contain generated experiment records only. "
+        "They do not contain logs from a real server."
+    )
 
-    comparison_df = pd.DataFrame(comparison_rows)
+
+# ============================================================
+# TAB 3: STRATEGY LAB
+# ============================================================
+
+with strategy:
+    st.markdown("## Recovery strategy lab")
+    st.caption(
+        "Compare retry policies under the same simulated interruption settings."
+    )
+
+    st.markdown(
+        """
+        <div class="panel">
+            <div class="section-label">Research question</div>
+            <div style="font-size:18px;font-weight:600;">
+                How do retries and idempotency affect request success,
+                latency, and duplicate processing?
+            </div>
+            <p class="small-muted">
+                All strategies use the same experiment seed and interruption
+                probability for a more consistent comparison.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.dataframe(
-        comparison_df,
+        strategy_data,
         use_container_width=True,
         hide_index=True,
     )
 
-    st.markdown("### Completion rate by strategy")
+    st.markdown("### Success rate comparison")
 
-    st.bar_chart(
-        comparison_df.set_index("Strategy")[["Completion rate (%)"]],
-        height=280,
+    success_chart = strategy_data[
+        ["Strategy", "Success rate (%)"]
+    ].set_index("Strategy")
+
+    st.bar_chart(success_chart, height=300)
+
+    st.markdown("### Latency comparison")
+
+    latency_chart = strategy_data[
+        ["Strategy", "Average latency (ms)"]
+    ].set_index("Strategy")
+
+    st.bar_chart(latency_chart, height=300)
+
+    st.markdown("### Duplicate operation comparison")
+
+    duplicate_chart = strategy_data[
+        ["Strategy", "Duplicate operations"]
+    ].set_index("Strategy")
+
+    st.bar_chart(duplicate_chart, height=260)
+
+    st.markdown("### How to interpret the results")
+
+    st.markdown("""
+    - **No retries:** Requests get one attempt. This avoids retry overhead
+      but may leave more requests unsuccessful.
+    - **More retries:** Give interrupted requests additional chances, but
+      increase the number of attempts and potentially the total latency.
+    - **Idempotency:** Models a server-side safeguard that recognises
+      repeated operations and prevents duplicate effects.
+    - **Unknown outcomes:** A request may have been processed even though
+      the client never received its response.
+    """)
+
+    st.warning(
+        "The comparison is a simplified model. Real systems require careful "
+        "testing of timeouts, backoff, server-side idempotency, and actual "
+        "service behaviour before drawing operational conclusions."
+    )
+
+    strategy_csv = strategy_data.to_csv(index=False).encode("utf-8")
+
+    st.download_button(
+        "⬇ Download strategy comparison (CSV)",
+        data=strategy_csv,
+        file_name="ghostload_strategy_comparison.csv",
+        mime="text/csv",
+    )
+
+
+# ============================================================
+# TAB 4: CLOUD COMPUTING LAB
+# ============================================================
+
+with cloud:
+    st.markdown("## Cloud infrastructure lab")
+    st.caption(
+        "Explore virtual server resources, AI workloads, and service pressure."
+    )
+
+    st.markdown(
+        """
+        <div class="panel">
+            <div class="section-label">Cloud environment</div>
+            <div style="font-size:23px;font-weight:700;">
+                Compute · Network · AI workloads
+            </div>
+            <p class="small-muted">
+                This module demonstrates the metrics a cloud observability
+                platform could monitor. Values are generated locally and
+                are not collected from cloud infrastructure.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    cloud_rng = random.Random(effective_seed + 100)
+
+    cloud_cpu = cloud_rng.randint(25, 95)
+    cloud_memory = cloud_rng.randint(35, 90)
+    cloud_gpu = cloud_rng.randint(10, 98)
+    cloud_availability = round(cloud_rng.uniform(98.2, 99.99), 2)
+    cloud_latency = cloud_rng.randint(35, 450)
+    queued_jobs = cloud_rng.randint(2, 85)
+
+    st.markdown("### Infrastructure overview")
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        metric_card("Service availability", f"{cloud_availability}%", "SIMULATED")
+        st.progress(min(cloud_availability / 100, 1.0))
+
+    with c2:
+        metric_card("CPU utilization", f"{cloud_cpu}%", "SIMULATED")
+        st.progress(cloud_cpu / 100)
+
+    with c3:
+        metric_card("Memory utilization", f"{cloud_memory}%", "SIMULATED")
+        st.progress(cloud_memory / 100)
+
+    c4, c5, c6 = st.columns(3)
+
+    with c4:
+        metric_card("GPU utilization", f"{cloud_gpu}%", "SIMULATED")
+        st.progress(cloud_gpu / 100)
+
+    with c5:
+        metric_card("Cloud request latency", f"{cloud_latency} ms", "SIMULATED")
+
+    with c6:
+        metric_card("AI jobs waiting", f"{queued_jobs}", "SIMULATED")
+
+    st.markdown("### Resource utilization")
+
+    resource_df = pd.DataFrame({
+        "Resource": ["CPU", "Memory", "GPU"],
+        "Utilization (%)": [cloud_cpu, cloud_memory, cloud_gpu],
+    }).set_index("Resource")
+
+    st.bar_chart(resource_df, height=260)
+
+    st.markdown("### Cloud workload simulator")
+
+    workload = st.select_slider(
+        "Select cloud workload pressure",
+        options=["Low", "Moderate", "High", "Extreme"],
+        value="Moderate",
+        key="cloud_workload",
+    )
+
+    simulate_outage = st.checkbox(
+        "Simulate a cloud service interruption",
+        value=False,
+        key="cloud_outage",
+    )
+
+    if st.button("Analyse cloud scenario", type="primary"):
+        pressure = {
+            "Low": 0.15,
+            "Moderate": 0.35,
+            "High": 0.65,
+            "Extreme": 0.90,
+        }[workload]
+
+        estimated_cpu = min(100, int(25 + pressure * 80))
+        estimated_latency = int(45 + pressure * 650)
+        estimated_queue = int(5 + pressure * 180)
+
+        if simulate_outage:
+            estimated_latency = int(estimated_latency * 1.8)
+
+        st.markdown("### Scenario results")
+
+        r1, r2, r3 = st.columns(3)
+
+        with r1:
+            st.metric("Modelled CPU pressure", f"{estimated_cpu}%")
+
+        with r2:
+            st.metric("Modelled latency", f"{estimated_latency} ms")
+
+        with r3:
+            st.metric("Modelled queued jobs", estimated_queue)
+
+        if simulate_outage:
+            st.warning(
+                "The scenario includes a simulated service interruption. "
+                "No actual cloud service has been interrupted."
+            )
+        elif pressure >= 0.65:
+            st.warning(
+                "The model indicates elevated workload pressure. "
+                "Real infrastructure would need to be measured to confirm it."
+            )
+        else:
+            st.success(
+                "The model indicates a relatively manageable workload."
+            )
+
+    st.markdown("### Cloud architecture concept")
+
+    architecture = st.columns(5)
+
+    architecture_labels = [
+        ("01", "Client", "Sends requests"),
+        ("02", "Cloud API", "Receives requests"),
+        ("03", "Compute", "Processes work"),
+        ("04", "Monitor", "Collects metrics"),
+        ("05", "Recovery", "Handles failures"),
+    ]
+
+    for col, (number, title, description) in zip(
+        architecture, architecture_labels
+    ):
+        with col:
+            st.markdown(
+                f"""
+                <div class="panel" style="min-height:135px;">
+                    <div class="section-label">{number}</div>
+                    <div style="font-size:16px;font-weight:600;">
+                        {title}
+                    </div>
+                    <p class="small-muted">{description}</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    st.info(
+        "Cloud integration is a future development step. This prototype "
+        "does not connect to AWS, Azure, Google Cloud, or real GPU servers."
+    )
+
+
+# ============================================================
+# TAB 5: METHODOLOGY
+# ============================================================
+
+with methodology:
+    st.markdown("## Research methodology")
+    st.caption(
+        "Understand the model, its assumptions, and its limitations."
+    )
+
+    st.markdown("### 1. What GHOSTLOAD tests")
+
+    st.markdown("""
+    GHOSTLOAD models what can happen when an application sends requests
+    through an unreliable connection. It compares request outcomes under
+    different retry policies and an idempotency-protection setting.
+    """)
+
+    st.markdown("### 2. Variables")
+
+    variables = pd.DataFrame([
+        {
+            "Variable": "Request count",
+            "Role": "Input",
+            "Description": "Number of simulated requests.",
+        },
+        {
+            "Variable": "Interruption probability",
+            "Role": "Input",
+            "Description": "Chance an attempt experiences an interruption.",
+        },
+        {
+            "Variable": "Base latency",
+            "Role": "Input",
+            "Description": "Starting latency used by the simulation.",
+        },
+        {
+            "Variable": "Retry policy",
+            "Role": "Input",
+            "Description": "Number of additional attempts permitted.",
+        },
+        {
+            "Variable": "Idempotency",
+            "Role": "Input",
+            "Description": "Whether duplicate effects are modelled as prevented.",
+        },
+        {
+            "Variable": "Success/failure rate",
+            "Role": "Output",
+            "Description": "Final status distribution of simulated requests.",
+        },
+        {
+            "Variable": "Latency and duplicates",
+            "Role": "Output",
+            "Description": "Modelled time and repeated processing.",
+        },
+    ])
+
+    st.dataframe(variables, use_container_width=True, hide_index=True)
+
+    st.markdown("### 3. Model assumptions")
+
+    st.markdown("""
+    - Each attempt has an interruption probability selected in the sidebar.
+    - Request latency is sampled around the configured base latency.
+    - An interrupted request may have been processed even if its response
+      is lost.
+    - A retry without idempotency protection can create a duplicate effect
+      in the model.
+    - The idempotency setting represents a simplified safeguard; it is not
+      a real database or server-side idempotency implementation.
+    - The experiment seed makes the generated results reproducible for the
+      same settings and software version.
+    """)
+
+    st.markdown("### 4. Limitations")
+
+    st.markdown("""
+    **This is a prototype, not a production monitoring platform.**
+
+    - It does not send real HTTP requests.
+    - It does not disconnect or modify your internet connection.
+    - It does not connect to cloud providers or measure actual server health.
+    - It does not run AI models or inspect real GPU workloads.
+    - Its latency and failure distributions are simplified assumptions.
+    - The reported success rate is a simulation result, not a service-level
+      availability guarantee.
+    """)
+
+    st.markdown("### 5. Future development roadmap")
+
+    roadmap = pd.DataFrame([
+        {
+            "Phase": "1",
+            "Feature": "Current simulation engine",
+            "Goal": "Explore retries, interruptions, and duplicate effects.",
+            "Status": "Prototype",
+        },
+        {
+            "Phase": "2",
+            "Feature": "Local test API",
+            "Goal": "Send test requests to a controlled FastAPI service.",
+            "Status": "Planned",
+        },
+        {
+            "Phase": "3",
+            "Feature": "Persistent experiment database",
+            "Goal": "Store and compare real test runs.",
+            "Status": "Planned",
+        },
+        {
+            "Phase": "4",
+            "Feature": "Cloud telemetry integration",
+            "Goal": "Collect authorised CPU, memory, and service metrics.",
+            "Status": "Planned",
+        },
+        {
+            "Phase": "5",
+            "Feature": "AI failure analyst",
+            "Goal": "Summarise real logs and propose evidence-based fixes.",
+            "Status": "Planned",
+        },
+    ])
+
+    st.dataframe(roadmap, use_container_width=True, hide_index=True)
+
+    st.markdown("### Export experiment")
+
+    full_csv = data.to_csv(index=False).encode("utf-8")
+
+    st.download_button(
+        "⬇ Download complete experiment (CSV)",
+        data=full_csv,
+        file_name="ghostload_full_experiment.csv",
+        mime="text/csv",
         use_container_width=True,
     )
 
-    st.info(
-        "This is a simplified model for exploring trade-offs, not a "
-        "benchmark of production systems. Real-world testing is required."
-    )
 
+# ------------------------- FOOTER ----------------------------
 
-# ----------------------------- RESEARCH NOTES -----------------------------
-with tab_method:
-    st.markdown("### What this prototype does")
-
-    left, right = st.columns(2, gap="large")
-
-    with left:
-        st.markdown(
-            """
-<div class="info-card">
-<h4>Included in this version</h4>
-<ul>
-<li>Reproducible synthetic transaction runs</li>
-<li>Configurable interruption probability and added latency</li>
-<li>Retry-policy comparison</li>
-<li>Potential duplicate-side-effect flags</li>
-<li>Transaction evidence and CSV export</li>
-</ul>
-</div>
-""",
-            unsafe_allow_html=True,
-        )
-
-    with right:
-        st.markdown(
-            """
-<div class="info-card">
-<h4>Not included yet</h4>
-<ul>
-<li>No live AI API integration</li>
-<li>No real network impairment or packet loss</li>
-<li>No persistent transaction database</li>
-<li>No validated production-reliability claims</li>
-<li>No proof of research novelty</li>
-</ul>
-</div>
-""",
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("### Proposed research question")
-
-    st.info(
-        "How effectively can a controlled failure-testing framework "
-        "detect transaction-integrity and recovery failures in AI-assisted "
-        "workflows under intermittent network connectivity?"
-    )
-
-    st.markdown("### Next engineering milestone")
-
-    st.markdown(
-        "Build a local test API and persistent transaction store. "
-        "Add controlled request interruption, idempotency keys, and "
-        "repeatable tests. Then measure missing or duplicate transactions, "
-        "recovery time, median latency, and 95th-percentile latency."
-    )
-
-    st.markdown("### Candidate measurements")
-
-    st.markdown(
-        "- Transaction completion rate (%)\n"
-        "- Missing or duplicate transaction count\n"
-        "- Recovery time after an interruption\n"
-        "- Median and 95th-percentile response latency\n"
-        "- Difference between baseline and improved implementations"
-    )
-
-
-# ----------------------------- FOOTER -----------------------------
 st.divider()
 
 st.markdown(
     """
-<div style="
-    display:flex;
-    justify-content:space-between;
-    gap:1rem;
-    flex-wrap:wrap;
-    color:#7f94ad;
-    font-size:.75rem;
-">
-    <span style="font-family:monospace">
-        GHOSTLOAD / RELIABILITY LAB / 0.2
-    </span>
-    <span>
-        Synthetic data only · Validate with controlled experiments.
-    </span>
-</div>
-""",
+    <div style="text-align:center;padding:14px 0 24px;">
+        <div class="eyebrow">GHOSTLOAD / RESEARCH PROTOTYPE</div>
+        <p class="small-muted">
+            Cloud reliability · Failure recovery · AI workload observability
+        </p>
+        <p class="small-muted">
+            Demonstration software. All displayed infrastructure and request
+            metrics are simulated unless a future version explicitly
+            connects to a real test environment.
+        </p>
+    </div>
+    """,
     unsafe_allow_html=True,
 )
