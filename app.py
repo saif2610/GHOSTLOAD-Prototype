@@ -1,18 +1,19 @@
 
 # ============================================================
-# GHOSTLOAD — Cloud Reliability & AI Workload Observatory
-# Complete Streamlit application
+# GHOSTLOAD | CLOUD RELIABILITY & AI WORKLOAD OBSERVATORY
+# Complete application: Streamlit + Pandas + Plotly
 # ============================================================
 
 import random
-import time
 from datetime import datetime
 
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 
-# ------------------------- PAGE SETUP -------------------------
+# ============================ CONFIG =========================
 
 st.set_page_config(
     page_title="GHOSTLOAD | Cloud Observatory",
@@ -21,8 +22,16 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+CYAN = "#55E6EF"
+BLUE = "#7599FF"
+PURPLE = "#B69CFF"
+PINK = "#FF7BA9"
+GREEN = "#65F0B1"
+ORANGE = "#FFBF69"
+WHITE = "#EDF4FF"
 
-# ------------------------- DESIGN SYSTEM ---------------------
+
+# ============================= CSS ===========================
 
 st.markdown("""
 <style>
@@ -31,10 +40,8 @@ st.markdown("""
 :root {
     --bg: #080b12;
     --panel: #101621;
-    --panel2: #141d2b;
     --border: #263348;
     --cyan: #55e6ef;
-    --blue: #7599ff;
     --muted: #94a3b8;
     --white: #edf4ff;
 }
@@ -49,7 +56,7 @@ st.markdown("""
 }
 
 [data-testid="stHeader"] {
-    background: rgba(8, 11, 18, 0.75);
+    background: rgba(8, 11, 18, .8);
 }
 
 [data-testid="stSidebar"] {
@@ -63,28 +70,17 @@ h1, h2, h3, h4, p, label {
 
 h1 {
     letter-spacing: -1.5px;
-    font-weight: 700;
-}
-
-.eyebrow {
-    color: var(--cyan);
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
 }
 
 .hero {
-    padding: 32px;
+    padding: 34px;
     border: 1px solid #294052;
     border-radius: 22px;
-    background:
-        linear-gradient(120deg, rgba(24, 46, 64, .94),
-        rgba(12, 18, 30, .97) 60%, rgba(17, 36, 47, .9));
+    background: linear-gradient(120deg, #182e40, #0c121e 65%, #11242f);
     position: relative;
     overflow: hidden;
-    animation: appear .7s ease-out;
-    margin-bottom: 24px;
+    animation: appear .65s ease-out;
+    margin-bottom: 22px;
 }
 
 .hero:after {
@@ -94,7 +90,7 @@ h1 {
     top: -130px;
     width: 310px;
     height: 310px;
-    border: 1px solid rgba(85, 230, 239, .25);
+    border: 1px solid rgba(85,230,239,.25);
     border-radius: 50%;
     box-shadow:
         0 0 0 28px rgba(85,230,239,.025),
@@ -103,12 +99,20 @@ h1 {
     pointer-events: none;
 }
 
+.eyebrow, .section-label {
+    color: var(--cyan);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
 .hero-title {
-    font-size: clamp(36px, 5vw, 62px);
+    font-size: clamp(38px, 5vw, 65px);
     font-weight: 700;
     letter-spacing: -3px;
     line-height: 1;
-    margin: 14px 0;
+    margin: 16px 0;
 }
 
 .hero-title span {
@@ -117,9 +121,21 @@ h1 {
 
 .hero-subtitle {
     color: #b3c2d6;
-    max-width: 650px;
+    max-width: 700px;
     font-size: 15px;
     line-height: 1.7;
+}
+
+.status-pill {
+    display: inline-block;
+    padding: 6px 11px;
+    border-radius: 999px;
+    border: 1px solid #315364;
+    color: var(--cyan);
+    background: rgba(85,230,239,.06);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
 }
 
 .panel {
@@ -138,7 +154,7 @@ h1 {
 
 .metric-label {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 1px;
 }
@@ -147,22 +163,13 @@ h1 {
     font-family: 'DM Mono', monospace;
     font-size: 29px;
     color: var(--white);
-    font-weight: 500;
     margin: 9px 0 4px;
 }
 
 .metric-note {
     color: var(--cyan);
-    font-size: 12px;
-}
-
-.section-label {
-    color: var(--cyan);
-    font-family: 'DM Mono', monospace;
     font-size: 11px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    margin-bottom: 8px;
+    letter-spacing: .5px;
 }
 
 .small-muted {
@@ -171,42 +178,15 @@ h1 {
     line-height: 1.65;
 }
 
-.status-pill {
-    display: inline-block;
-    padding: 5px 10px;
-    border-radius: 999px;
-    border: 1px solid #315364;
-    color: var(--cyan);
-    background: rgba(85,230,239,.06);
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 1px;
-}
-
 .node {
-    display: inline-block;
     border: 1px solid #2e5066;
     background: #101e2c;
-    padding: 10px 13px;
-    border-radius: 10px;
+    padding: 14px 8px;
+    border-radius: 12px;
     color: #dcecff;
     font-size: 12px;
     text-align: center;
-    min-width: 100px;
-}
-
-.node-line {
-    color: var(--cyan);
-    text-align: center;
-    font-size: 20px;
-    padding: 3px;
-}
-
-div[data-testid="stMetric"] {
-    background: #101824;
-    border: 1px solid var(--border);
-    padding: 14px;
-    border-radius: 13px;
+    min-height: 74px;
 }
 
 .stButton > button {
@@ -221,7 +201,7 @@ div[data-testid="stMetric"] {
 .stButton > button:hover {
     border-color: var(--cyan);
     color: white;
-    box-shadow: 0 0 18px rgba(85,230,239,.13);
+    box-shadow: 0 0 18px rgba(85,230,239,.15);
 }
 
 .stDownloadButton > button {
@@ -248,6 +228,13 @@ div[data-testid="stMetric"] {
     border-bottom: 2px solid var(--cyan);
 }
 
+div[data-testid="stMetric"] {
+    background: #101824;
+    border: 1px solid var(--border);
+    padding: 14px;
+    border-radius: 13px;
+}
+
 hr {
     border-color: var(--border);
 }
@@ -258,16 +245,54 @@ hr {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    * {
-        animation: none !important;
-        transition: none !important;
-    }
+    * { animation: none !important; transition: none !important; }
 }
 </style>
 """, unsafe_allow_html=True)
 
 
-# ------------------------- HELPERS ---------------------------
+# ======================== CHART THEME ========================
+
+def style_chart(fig, height=350, title=None):
+    fig.update_layout(
+        title=dict(
+            text=title or "",
+            font=dict(size=17, color=WHITE),
+            x=0.02,
+            xanchor="left",
+        ),
+        template="plotly_dark",
+        height=height,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(12,18,30,0.35)",
+        font=dict(family="Arial, sans-serif", color="#B8C6D9", size=12),
+        margin=dict(l=20, r=20, t=65, b=45),
+        hoverlabel=dict(
+            bgcolor="#101B2A",
+            bordercolor=CYAN,
+            font=dict(color="#FFFFFF", size=12),
+        ),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1,
+        ),
+        xaxis=dict(
+            showgrid=False,
+            zeroline=False,
+            linecolor="#263348",
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridcolor="rgba(130,160,190,0.12)",
+            zeroline=False,
+            linecolor="#263348",
+        ),
+    )
+    return fig
+
 
 def metric_card(label, value, note="SIMULATED"):
     st.markdown(
@@ -282,6 +307,8 @@ def metric_card(label, value, note="SIMULATED"):
     )
 
 
+# ======================= SIMULATION ENGINE ===================
+
 def run_simulation(
     request_count,
     interruption_probability,
@@ -290,7 +317,7 @@ def run_simulation(
     idempotency,
     seed,
 ):
-    """Simulate request outcomes. This does not send real network requests."""
+    """Generate synthetic request records; no real network requests are sent."""
 
     rng = random.Random(seed)
     records = []
@@ -298,7 +325,6 @@ def run_simulation(
     for request_id in range(1, request_count + 1):
         attempts = 0
         duplicate_operations = 0
-        completed = False
         response_lost = False
         total_latency = 0
         final_status = "FAILED"
@@ -316,13 +342,12 @@ def run_simulation(
             interrupted = rng.random() < interruption_probability
 
             if not interrupted:
-                completed = True
                 final_status = "SUCCESS"
                 failure_reason = ""
                 break
 
-            # Sometimes the server processes a request but the response
-            # is lost. Retrying can then repeat the operation.
+            # Model whether a server processed the request but its response
+            # was lost. This is a simplified scenario.
             server_processed = rng.random() < 0.55
 
             if server_processed:
@@ -333,13 +358,10 @@ def run_simulation(
                         duplicate_operations += 1
                     continue
 
-                # The operation may have happened, but the client
-                # never received a successful response.
                 final_status = "UNKNOWN"
                 failure_reason = "Response lost; processing uncertain"
                 break
 
-            # The request did not complete on the server.
             if attempt < max_retries:
                 continue
 
@@ -365,22 +387,18 @@ def calculate_metrics(data):
 
     if total == 0:
         return {
-            "success_rate": 0,
-            "failure_rate": 0,
-            "unknown_rate": 0,
+            "success_rate": 0.0,
+            "failure_rate": 0.0,
+            "unknown_rate": 0.0,
             "duplicates": 0,
-            "avg_latency": 0,
-            "avg_attempts": 0,
+            "avg_latency": 0.0,
+            "avg_attempts": 0.0,
         }
 
-    successes = int((data["Status"] == "SUCCESS").sum())
-    failures = int((data["Status"] == "FAILED").sum())
-    unknown = int((data["Status"] == "UNKNOWN").sum())
-
     return {
-        "success_rate": successes / total * 100,
-        "failure_rate": failures / total * 100,
-        "unknown_rate": unknown / total * 100,
+        "success_rate": (data["Status"] == "SUCCESS").mean() * 100,
+        "failure_rate": (data["Status"] == "FAILED").mean() * 100,
+        "unknown_rate": (data["Status"] == "UNKNOWN").mean() * 100,
         "duplicates": int(data["Duplicate Operations"].sum()),
         "avg_latency": float(data["Latency (ms)"].mean()),
         "avg_attempts": float(data["Attempts"].mean()),
@@ -388,8 +406,6 @@ def calculate_metrics(data):
 
 
 def make_strategy_table(count, interruption, latency, seed):
-    """Compare retry and idempotency strategies using common settings."""
-
     strategies = [
         ("No retries", 0, False),
         ("One retry", 1, False),
@@ -400,7 +416,7 @@ def make_strategy_table(count, interruption, latency, seed):
     results = []
 
     for name, retries, idem in strategies:
-        data = run_simulation(
+        result = run_simulation(
             request_count=count,
             interruption_probability=interruption,
             base_latency=latency,
@@ -408,8 +424,7 @@ def make_strategy_table(count, interruption, latency, seed):
             idempotency=idem,
             seed=seed,
         )
-
-        m = calculate_metrics(data)
+        m = calculate_metrics(result)
 
         results.append({
             "Strategy": name,
@@ -424,41 +439,30 @@ def make_strategy_table(count, interruption, latency, seed):
     return pd.DataFrame(results)
 
 
-# ------------------------- SIDEBAR ---------------------------
+# ============================ SIDEBAR ========================
 
 with st.sidebar:
     st.markdown(
         '<div class="eyebrow">GHOSTLOAD / CONTROL DECK</div>',
         unsafe_allow_html=True,
     )
-
     st.markdown("## Experiment setup")
     st.caption("Configure the simulated test environment.")
 
     request_count = st.slider(
         "Number of requests",
-        min_value=100,
-        max_value=5000,
-        value=1000,
-        step=100,
+        100, 5000, 1000, step=100,
     )
 
     interruption_probability = st.slider(
-        "Connection interruption probability",
-        min_value=0.0,
-        max_value=0.8,
-        value=0.15,
-        step=0.05,
-        format="%.2f",
-        help="Probability that an individual request attempt is interrupted.",
+        "Interruption probability",
+        0.0, 0.8, 0.15, step=0.05,
+        help="Chance an individual request attempt is interrupted.",
     )
 
     base_latency = st.slider(
-        "Base request latency (ms)",
-        min_value=20,
-        max_value=1000,
-        value=120,
-        step=20,
+        "Base latency (ms)",
+        20, 1000, 120, step=20,
     )
 
     max_retries = st.selectbox(
@@ -471,10 +475,7 @@ with st.sidebar:
     idempotency = st.checkbox(
         "Enable idempotency protection",
         value=True,
-        help=(
-            "Models a safeguard that prevents a retried operation "
-            "from being applied more than once."
-        ),
+        help="Models protection against duplicate operation effects.",
     )
 
     seed = st.number_input(
@@ -485,36 +486,33 @@ with st.sidebar:
         step=1,
     )
 
+    if "experiment_seed" not in st.session_state:
+        st.session_state["experiment_seed"] = int(seed)
+
+    if st.button("↻ Generate new experiment", use_container_width=True):
+        st.session_state["experiment_seed"] += 1
+        st.rerun()
+
     st.divider()
 
-    st.markdown("### Test profile")
+    st.markdown("### Execution mode")
     st.markdown(
         """
         <div class="panel">
-            <div class="section-label">Execution mode</div>
-            <div style="font-size:15px;font-weight:600;">
-                Local simulation
-            </div>
+            <div class="section-label">Local simulation</div>
             <p class="small-muted">
-                No real requests, payments, or cloud services are affected.
+                Synthetic request and cloud metrics. No real servers or
+                payment systems are affected.
             </p>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    if st.button("↻ Generate new experiment", use_container_width=True):
-        st.session_state["experiment_seed"] = (
-            int(st.session_state.get("experiment_seed", seed)) + 1
-        )
-        st.rerun()
 
+# ======================= GENERATE DATA =======================
 
-# Keep experiment data stable between normal Streamlit reruns.
-effective_seed = int(st.session_state.get("experiment_seed", seed))
-
-if st.session_state.get("last_seed") != effective_seed:
-    st.session_state["last_seed"] = effective_seed
+effective_seed = int(st.session_state["experiment_seed"])
 
 data = run_simulation(
     request_count=request_count,
@@ -526,6 +524,7 @@ data = run_simulation(
 )
 
 metrics = calculate_metrics(data)
+
 strategy_data = make_strategy_table(
     count=min(request_count, 2000),
     interruption=interruption_probability,
@@ -534,17 +533,19 @@ strategy_data = make_strategy_table(
 )
 
 
-# ------------------------- HEADER ----------------------------
+# ============================= HERO ==========================
 
 st.markdown(
     """
     <div class="hero">
-        <div class="eyebrow">CLOUD RELIABILITY / AI WORKLOADS / RESILIENCE</div>
+        <div class="eyebrow">
+            CLOUD RELIABILITY / AI WORKLOADS / RESILIENCE
+        </div>
         <div class="hero-title">GHOST<span>LOAD</span></div>
         <div class="hero-subtitle">
             A cloud reliability observatory for exploring service failures,
-            request recovery, workload pressure, and the behaviour of
-            retry strategies in controlled experiments.
+            request recovery, workload pressure, and retry strategies
+            through controlled experiments.
         </div>
         <br>
         <span class="status-pill">● SIMULATION ENGINE ACTIVE</span>
@@ -569,63 +570,43 @@ st.markdown(
 st.write("")
 
 
-# ------------------------- TABS ------------------------------
+# ============================== TABS =========================
 
 overview, evidence, strategy, cloud, methodology = st.tabs([
-    "◈  Overview",
-    "▤  Request evidence",
-    "⇄  Strategy lab",
-    "☁  Cloud lab",
-    "ⓘ  Methodology",
+    "◈ Overview",
+    "▤ Request evidence",
+    "⇄ Strategy lab",
+    "☁ Cloud lab",
+    "ⓘ Methodology",
 ])
 
 
 # ============================================================
-# TAB 1: OVERVIEW
+# TAB 1 — OVERVIEW
 # ============================================================
 
 with overview:
     st.markdown("## System overview")
-    st.caption(
-        "A quick view of the current simulated reliability experiment."
-    )
+    st.caption("An at-a-glance view of the current reliability experiment.")
 
-    a, b, c, d = st.columns(4)
+    c1, c2, c3, c4 = st.columns(4)
 
-    with a:
-        metric_card(
-            "Successful requests",
-            f"{metrics['success_rate']:.1f}%",
-            "Final status = SUCCESS",
-        )
+    with c1:
+        metric_card("Successful requests", f"{metrics['success_rate']:.1f}%")
 
-    with b:
-        metric_card(
-            "Failed requests",
-            f"{metrics['failure_rate']:.1f}%",
-            "Final status = FAILED",
-        )
+    with c2:
+        metric_card("Failed requests", f"{metrics['failure_rate']:.1f}%")
 
-    with c:
-        metric_card(
-            "Average latency",
-            f"{metrics['avg_latency']:.0f} ms",
-            "Total simulated request time",
-        )
+    with c3:
+        metric_card("Average latency", f"{metrics['avg_latency']:.0f} ms")
 
-    with d:
-        metric_card(
-            "Duplicate operations",
-            f"{metrics['duplicates']:,}",
-            "Modelled repeated processing",
-        )
+    with c4:
+        metric_card("Duplicate operations", f"{metrics['duplicates']:,}")
 
-    st.write("")
-
-    left, right = st.columns([1.35, 1])
+    left, right = st.columns([1, 1.35])
 
     with left:
-        st.markdown("### Request outcome distribution")
+        st.markdown("### Request health distribution")
 
         outcome_counts = (
             data["Status"]
@@ -633,94 +614,129 @@ with overview:
             .reindex(["SUCCESS", "FAILED", "UNKNOWN"], fill_value=0)
         )
 
-        outcome_df = pd.DataFrame({
-            "Outcome": outcome_counts.index,
-            "Requests": outcome_counts.values,
-        }).set_index("Outcome")
+        donut = go.Figure(
+            data=[
+                go.Pie(
+                    labels=outcome_counts.index,
+                    values=outcome_counts.values,
+                    hole=0.72,
+                    sort=False,
+                    marker=dict(
+                        colors=[CYAN, PINK, PURPLE],
+                        line=dict(color="#0B101A", width=4),
+                    ),
+                    textinfo="percent",
+                    textposition="inside",
+                    hovertemplate=(
+                        "<b>%{label}</b><br>"
+                        "Requests: %{value:,}<br>"
+                        "Share: %{percent}<extra></extra>"
+                    ),
+                )
+            ]
+        )
 
-        st.bar_chart(outcome_df, height=300)
+        donut.add_annotation(
+            text=(
+                f"<b>{len(data):,}</b>"
+                "<br><span style='font-size:11px'>REQUESTS</span>"
+            ),
+            x=0.5,
+            y=0.5,
+            showarrow=False,
+            font=dict(size=23, color=WHITE),
+        )
+
+        donut.update_layout(showlegend=True)
+        style_chart(donut, 350, "Request outcome mix")
+
+        st.plotly_chart(
+            donut,
+            use_container_width=True,
+            key="overview_donut",
+        )
 
     with right:
-        st.markdown("### Current configuration")
+        st.markdown("### Latency telemetry")
 
-        st.markdown(
-            f"""
-            <div class="panel">
-                <div class="section-label">Network model</div>
-                <div class="metric-value" style="font-size:22px;">
-                    {interruption_probability * 100:.0f}%
+        latency_plot = go.Figure()
+
+        latency_plot.add_trace(
+            go.Scatter(
+                x=list(range(1, len(data) + 1)),
+                y=data["Latency (ms)"],
+                mode="lines",
+                name="Request latency",
+                line=dict(color=CYAN, width=2, shape="spline"),
+                fill="tozeroy",
+                fillcolor="rgba(85,230,239,0.10)",
+                hovertemplate=(
+                    "Request #%{x}<br>"
+                    "Latency: %{y:.0f} ms<extra></extra>"
+                ),
+            )
+        )
+
+        latency_plot.add_hline(
+            y=base_latency,
+            line_dash="dash",
+            line_color=ORANGE,
+            annotation_text="Configured base latency",
+            annotation_position="top left",
+        )
+
+        latency_plot.update_xaxes(title="Request number")
+        latency_plot.update_yaxes(
+            title="Total latency (ms)",
+            rangemode="tozero",
+        )
+
+        style_chart(latency_plot, 350, "Request latency curve")
+
+        st.plotly_chart(
+            latency_plot,
+            use_container_width=True,
+            key="overview_latency",
+        )
+
+    st.markdown("### Request processing pipeline")
+
+    pipeline = st.columns(4)
+
+    pipeline_items = [
+        ("01", "Request created", "Generate a test request"),
+        ("02", "Failure simulated", "Apply interruption probability"),
+        ("03", "Retry decision", "Apply configured retry policy"),
+        ("04", "Outcome recorded", "Store the final result"),
+    ]
+
+    for col, (number, title, description) in zip(pipeline, pipeline_items):
+        with col:
+            st.markdown(
+                f"""
+                <div class="node">
+                    <div class="section-label">{number}</div>
+                    <b>{title}</b>
+                    <div class="small-muted">{description}</div>
                 </div>
-                <p class="small-muted">Interruption probability per attempt</p>
-                <hr>
-                <div class="section-label">Retry policy</div>
-                <div style="font-size:18px;font-weight:600;">
-                    {max_retries} retries
-                </div>
-                <hr>
-                <div class="section-label">Idempotency protection</div>
-                <div style="font-size:18px;font-weight:600;">
-                    {"Enabled" if idempotency else "Disabled"}
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("### Request latency profile")
-
-    latency_df = data[["Request ID", "Latency (ms)"]].copy()
-    latency_df["Request number"] = range(1, len(latency_df) + 1)
-
-    st.line_chart(
-        latency_df.set_index("Request number")[["Latency (ms)"]],
-        height=260,
-    )
-
-    st.markdown("### Request processing flow")
-
-    flow1, flow2, flow3, flow4 = st.columns(4)
-
-    with flow1:
-        st.markdown(
-            '<div class="node">01<br>Request created</div>',
-            unsafe_allow_html=True,
-        )
-
-    with flow2:
-        st.markdown(
-            '<div class="node">02<br>Failure simulated</div>',
-            unsafe_allow_html=True,
-        )
-
-    with flow3:
-        st.markdown(
-            '<div class="node">03<br>Retry decision</div>',
-            unsafe_allow_html=True,
-        )
-
-    with flow4:
-        st.markdown(
-            '<div class="node">04<br>Outcome recorded</div>',
-            unsafe_allow_html=True,
-        )
+                """,
+                unsafe_allow_html=True,
+            )
 
     st.info(
-        "Interpretation: retries can improve the chance of receiving a "
-        "successful response, but can add latency. Idempotency is modelled "
-        "as protection against duplicate operations. These are simulated "
-        "results, not measurements from a production system."
+        "These results are simulated. Retries may improve the chance of "
+        "success but add latency. Idempotency is modelled as protection "
+        "against duplicate effects; no real server is being tested."
     )
 
 
 # ============================================================
-# TAB 2: REQUEST EVIDENCE
+# TAB 2 — REQUEST EVIDENCE
 # ============================================================
 
 with evidence:
     st.markdown("## Request-level evidence")
-    st.caption(
-        "Inspect individual simulated requests and export the experiment data."
-    )
+    st.caption("Inspect individual records and export the generated dataset.")
 
     search_term = st.text_input(
         "Search request ID",
@@ -744,9 +760,7 @@ with evidence:
             )
         ]
 
-    st.markdown(
-        f"**Showing {len(filtered):,} of {len(data):,} requests**"
-    )
+    st.markdown(f"**Showing {len(filtered):,} of {len(data):,} requests**")
 
     st.dataframe(
         filtered,
@@ -755,17 +769,13 @@ with evidence:
         height=420,
     )
 
-    csv_data = filtered.to_csv(index=False).encode("utf-8")
-
     st.download_button(
-        "⬇ Download filtered request evidence (CSV)",
-        data=csv_data,
+        "⬇ Download filtered evidence (CSV)",
+        data=filtered.to_csv(index=False).encode("utf-8"),
         file_name="ghostload_request_evidence.csv",
         mime="text/csv",
         use_container_width=True,
     )
-
-    st.markdown("### Evidence summary")
 
     e1, e2, e3 = st.columns(3)
 
@@ -775,41 +785,61 @@ with evidence:
     with e2:
         st.metric(
             "Response-loss events",
-            int(filtered["Response Lost"].sum()) if len(filtered) else 0,
+            int(filtered["Response Lost"].sum()),
         )
 
     with e3:
         st.metric(
             "Duplicate operations",
-            int(filtered["Duplicate Operations"].sum()) if len(filtered) else 0,
+            int(filtered["Duplicate Operations"].sum()),
         )
 
-    st.caption(
-        "CSV exports contain generated experiment records only. "
-        "They do not contain logs from a real server."
-    )
+    st.markdown("### Latency distribution")
+
+    if not filtered.empty:
+        histogram = px.histogram(
+            filtered,
+            x="Latency (ms)",
+            color="Status",
+            color_discrete_map={
+                "SUCCESS": CYAN,
+                "FAILED": PINK,
+                "UNKNOWN": PURPLE,
+            },
+            nbins=35,
+            opacity=0.85,
+        )
+
+        histogram.update_layout(bargap=0.08)
+        style_chart(histogram, 360, "Distribution of request latency")
+
+        st.plotly_chart(
+            histogram,
+            use_container_width=True,
+            key="evidence_histogram",
+        )
+    else:
+        st.info("No requests match your current filters.")
 
 
 # ============================================================
-# TAB 3: STRATEGY LAB
+# TAB 3 — STRATEGY LAB
 # ============================================================
 
 with strategy:
     st.markdown("## Recovery strategy lab")
-    st.caption(
-        "Compare retry policies under the same simulated interruption settings."
-    )
+    st.caption("Compare retry policies under the same simulated settings.")
 
     st.markdown(
         """
         <div class="panel">
             <div class="section-label">Research question</div>
-            <div style="font-size:18px;font-weight:600;">
-                How do retries and idempotency affect request success,
+            <div style="font-size:19px;font-weight:600;">
+                How do retries and idempotency affect success,
                 latency, and duplicate processing?
             </div>
             <p class="small-muted">
-                All strategies use the same experiment seed and interruption
+                Each strategy uses the same experiment seed and interruption
                 probability for a more consistent comparison.
             </p>
         </div>
@@ -825,66 +855,140 @@ with strategy:
 
     st.markdown("### Success rate comparison")
 
-    success_chart = strategy_data[
-        ["Strategy", "Success rate (%)"]
-    ].set_index("Strategy")
+    colors = [PINK, BLUE, PURPLE, CYAN]
 
-    st.bar_chart(success_chart, height=300)
+    success_fig = go.Figure()
+
+    success_fig.add_trace(
+        go.Bar(
+            x=strategy_data["Strategy"],
+            y=strategy_data["Success rate (%)"],
+            marker=dict(
+                color=colors,
+                line=dict(color="rgba(255,255,255,0.12)", width=1),
+            ),
+            text=[
+                f"{value:.1f}%"
+                for value in strategy_data["Success rate (%)"]
+            ],
+            textposition="outside",
+            hovertemplate=(
+                "<b>%{x}</b><br>"
+                "Success rate: %{y:.2f}%<extra></extra>"
+            ),
+        )
+    )
+
+    success_fig.update_layout(showlegend=False)
+    success_fig.update_yaxes(
+        title="Successful requests (%)",
+        range=[0, 115],
+    )
+
+    style_chart(success_fig, 390, "Recovery strategy performance")
+
+    st.plotly_chart(
+        success_fig,
+        use_container_width=True,
+        key="strategy_success",
+    )
 
     st.markdown("### Latency comparison")
 
-    latency_chart = strategy_data[
-        ["Strategy", "Average latency (ms)"]
-    ].set_index("Strategy")
+    latency_fig = go.Figure()
 
-    st.bar_chart(latency_chart, height=300)
+    latency_fig.add_trace(
+        go.Scatter(
+            x=strategy_data["Strategy"],
+            y=strategy_data["Average latency (ms)"],
+            mode="lines+markers",
+            line=dict(color=CYAN, width=3, shape="spline"),
+            marker=dict(
+                size=12,
+                color=CYAN,
+                line=dict(color=WHITE, width=1),
+            ),
+            fill="tozeroy",
+            fillcolor="rgba(85,230,239,0.08)",
+            hovertemplate=(
+                "<b>%{x}</b><br>"
+                "Average latency: %{y:.1f} ms<extra></extra>"
+            ),
+        )
+    )
+
+    latency_fig.update_yaxes(
+        title="Average latency (ms)",
+        rangemode="tozero",
+    )
+
+    style_chart(latency_fig, 370, "Latency cost of recovery")
+
+    st.plotly_chart(
+        latency_fig,
+        use_container_width=True,
+        key="strategy_latency",
+    )
 
     st.markdown("### Duplicate operation comparison")
 
-    duplicate_chart = strategy_data[
-        ["Strategy", "Duplicate operations"]
-    ].set_index("Strategy")
+    duplicate_fig = go.Figure()
 
-    st.bar_chart(duplicate_chart, height=260)
+    duplicate_fig.add_trace(
+        go.Scatter(
+            x=strategy_data["Strategy"],
+            y=strategy_data["Duplicate operations"],
+            mode="lines+markers",
+            line=dict(color=PINK, width=3, shape="spline"),
+            marker=dict(size=11, color=PINK),
+            fill="tozeroy",
+            fillcolor="rgba(255,123,169,0.09)",
+            hovertemplate=(
+                "<b>%{x}</b><br>"
+                "Duplicate operations: %{y}<extra></extra>"
+            ),
+        )
+    )
 
-    st.markdown("### How to interpret the results")
+    duplicate_fig.update_yaxes(title="Duplicate operations", rangemode="tozero")
+    style_chart(duplicate_fig, 350, "Duplicate processing risk")
+
+    st.plotly_chart(
+        duplicate_fig,
+        use_container_width=True,
+        key="strategy_duplicates",
+    )
+
+    st.markdown("### Interpretation")
 
     st.markdown("""
-    - **No retries:** Requests get one attempt. This avoids retry overhead
-      but may leave more requests unsuccessful.
-    - **More retries:** Give interrupted requests additional chances, but
-      increase the number of attempts and potentially the total latency.
-    - **Idempotency:** Models a server-side safeguard that recognises
-      repeated operations and prevents duplicate effects.
-    - **Unknown outcomes:** A request may have been processed even though
-      the client never received its response.
+    - **No retries:** One attempt only; interrupted requests may remain incomplete.
+    - **More retries:** Additional attempts may improve completion but add latency.
+    - **Idempotency:** Represents a safeguard against repeated operation effects.
+    - **Unknown outcomes:** A request may have been processed even when the
+      client did not receive a response.
     """)
 
     st.warning(
-        "The comparison is a simplified model. Real systems require careful "
-        "testing of timeouts, backoff, server-side idempotency, and actual "
-        "service behaviour before drawing operational conclusions."
+        "This is a simplified model, not a guarantee of real-world performance. "
+        "Actual retry and idempotency behaviour depends on server implementation."
     )
-
-    strategy_csv = strategy_data.to_csv(index=False).encode("utf-8")
 
     st.download_button(
         "⬇ Download strategy comparison (CSV)",
-        data=strategy_csv,
+        data=strategy_data.to_csv(index=False).encode("utf-8"),
         file_name="ghostload_strategy_comparison.csv",
         mime="text/csv",
     )
 
 
 # ============================================================
-# TAB 4: CLOUD COMPUTING LAB
+# TAB 4 — CLOUD COMPUTING LAB
 # ============================================================
 
 with cloud:
     st.markdown("## Cloud infrastructure lab")
-    st.caption(
-        "Explore virtual server resources, AI workloads, and service pressure."
-    )
+    st.caption("Explore simulated compute, network, and AI workload metrics.")
 
     st.markdown(
         """
@@ -894,9 +998,8 @@ with cloud:
                 Compute · Network · AI workloads
             </div>
             <p class="small-muted">
-                This module demonstrates the metrics a cloud observability
-                platform could monitor. Values are generated locally and
-                are not collected from cloud infrastructure.
+                Illustrative telemetry for a future cloud monitoring platform.
+                This prototype is not connected to a cloud provider.
             </p>
         </div>
         """,
@@ -914,45 +1017,93 @@ with cloud:
 
     st.markdown("### Infrastructure overview")
 
-    c1, c2, c3 = st.columns(3)
+    availability_col, cpu_col, memory_col = st.columns(3)
 
-    with c1:
-        metric_card("Service availability", f"{cloud_availability}%", "SIMULATED")
-        st.progress(min(cloud_availability / 100, 1.0))
+    with availability_col:
+        metric_card(
+            "Service availability",
+            f"{cloud_availability}%",
+            "SIMULATED",
+        )
 
-    with c2:
+    with cpu_col:
         metric_card("CPU utilization", f"{cloud_cpu}%", "SIMULATED")
-        st.progress(cloud_cpu / 100)
 
-    with c3:
+    with memory_col:
         metric_card("Memory utilization", f"{cloud_memory}%", "SIMULATED")
-        st.progress(cloud_memory / 100)
 
-    c4, c5, c6 = st.columns(3)
+    st.markdown("### Resource utilization gauges")
+    st.caption("Circular gauges display generated values, not live measurements.")
 
-    with c4:
-        metric_card("GPU utilization", f"{cloud_gpu}%", "SIMULATED")
-        st.progress(cloud_gpu / 100)
+    gauge_cols = st.columns(3)
 
-    with c5:
+    resource_values = [
+        ("CPU", cloud_cpu, CYAN),
+        ("Memory", cloud_memory, PURPLE),
+        ("GPU", cloud_gpu, PINK),
+    ]
+
+    for col, (name, value, accent) in zip(gauge_cols, resource_values):
+        with col:
+            gauge = go.Figure(
+                go.Indicator(
+                    mode="gauge+number",
+                    value=value,
+                    number={
+                        "suffix": "%",
+                        "font": {"size": 30, "color": WHITE},
+                    },
+                    title={
+                        "text": name,
+                        "font": {"size": 15, "color": "#B8C6D9"},
+                    },
+                    gauge={
+                        "shape": "angular",
+                        "axis": {
+                            "range": [0, 100],
+                            "tickwidth": 0,
+                            "tickcolor": "#263348",
+                        },
+                        "bar": {
+                            "color": accent,
+                            "thickness": 0.25,
+                        },
+                        "bgcolor": "#101621",
+                        "borderwidth": 0,
+                        "steps": [
+                            {"range": [0, 60], "color": "#182332"},
+                            {"range": [60, 85], "color": "#263044"},
+                            {"range": [85, 100], "color": "#402331"},
+                        ],
+                    },
+                )
+            )
+
+            gauge.update_layout(
+                height=245,
+                margin=dict(l=20, r=20, t=40, b=10),
+                paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(color=WHITE),
+            )
+
+            st.plotly_chart(
+                gauge,
+                use_container_width=True,
+                key=f"cloud_gauge_{name}",
+            )
+
+    cloud_metrics_col1, cloud_metrics_col2 = st.columns(2)
+
+    with cloud_metrics_col1:
         metric_card("Cloud request latency", f"{cloud_latency} ms", "SIMULATED")
 
-    with c6:
-        metric_card("AI jobs waiting", f"{queued_jobs}", "SIMULATED")
-
-    st.markdown("### Resource utilization")
-
-    resource_df = pd.DataFrame({
-        "Resource": ["CPU", "Memory", "GPU"],
-        "Utilization (%)": [cloud_cpu, cloud_memory, cloud_gpu],
-    }).set_index("Resource")
-
-    st.bar_chart(resource_df, height=260)
+    with cloud_metrics_col2:
+        metric_card("AI jobs waiting", str(queued_jobs), "SIMULATED")
 
     st.markdown("### Cloud workload simulator")
 
     workload = st.select_slider(
-        "Select cloud workload pressure",
+        "Choose workload pressure",
         options=["Low", "Moderate", "High", "Extreme"],
         value="Moderate",
         key="cloud_workload",
@@ -994,24 +1145,22 @@ with cloud:
 
         if simulate_outage:
             st.warning(
-                "The scenario includes a simulated service interruption. "
-                "No actual cloud service has been interrupted."
+                "This scenario includes a simulated interruption. "
+                "No real cloud service has been interrupted."
             )
         elif pressure >= 0.65:
             st.warning(
                 "The model indicates elevated workload pressure. "
-                "Real infrastructure would need to be measured to confirm it."
+                "Real infrastructure measurements would be needed to confirm it."
             )
         else:
-            st.success(
-                "The model indicates a relatively manageable workload."
-            )
+            st.success("The model indicates a relatively manageable workload.")
 
     st.markdown("### Cloud architecture concept")
 
     architecture = st.columns(5)
 
-    architecture_labels = [
+    architecture_items = [
         ("01", "Client", "Sends requests"),
         ("02", "Cloud API", "Receives requests"),
         ("03", "Compute", "Processes work"),
@@ -1020,47 +1169,44 @@ with cloud:
     ]
 
     for col, (number, title, description) in zip(
-        architecture, architecture_labels
+        architecture, architecture_items
     ):
         with col:
             st.markdown(
                 f"""
-                <div class="panel" style="min-height:135px;">
+                <div class="node">
                     <div class="section-label">{number}</div>
-                    <div style="font-size:16px;font-weight:600;">
-                        {title}
-                    </div>
-                    <p class="small-muted">{description}</p>
+                    <b>{title}</b>
+                    <div class="small-muted">{description}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
     st.info(
-        "Cloud integration is a future development step. This prototype "
-        "does not connect to AWS, Azure, Google Cloud, or real GPU servers."
+        "This version does not connect to AWS, Azure, Google Cloud, "
+        "or real GPU servers. Cloud telemetry is simulated."
     )
 
 
 # ============================================================
-# TAB 5: METHODOLOGY
+# TAB 5 — METHODOLOGY
 # ============================================================
 
 with methodology:
     st.markdown("## Research methodology")
-    st.caption(
-        "Understand the model, its assumptions, and its limitations."
-    )
+    st.caption("Review the model, assumptions, limitations, and roadmap.")
 
-    st.markdown("### 1. What GHOSTLOAD tests")
+    st.markdown("### What does GHOSTLOAD investigate?")
 
     st.markdown("""
-    GHOSTLOAD models what can happen when an application sends requests
-    through an unreliable connection. It compares request outcomes under
-    different retry policies and an idempotency-protection setting.
+    GHOSTLOAD models how an application might behave when requests
+    experience connection interruptions. It compares retry policies and
+    a simplified idempotency safeguard, measuring final request status,
+    latency, attempts, and duplicate-operation counts.
     """)
 
-    st.markdown("### 2. Variables")
+    st.markdown("### Experiment variables")
 
     variables = pd.DataFrame([
         {
@@ -1071,7 +1217,7 @@ with methodology:
         {
             "Variable": "Interruption probability",
             "Role": "Input",
-            "Description": "Chance an attempt experiences an interruption.",
+            "Description": "Chance an attempt is interrupted.",
         },
         {
             "Variable": "Base latency",
@@ -1081,81 +1227,83 @@ with methodology:
         {
             "Variable": "Retry policy",
             "Role": "Input",
-            "Description": "Number of additional attempts permitted.",
+            "Description": "Number of additional attempts allowed.",
         },
         {
-            "Variable": "Idempotency",
+            "Variable": "Idempotency setting",
             "Role": "Input",
             "Description": "Whether duplicate effects are modelled as prevented.",
         },
         {
-            "Variable": "Success/failure rate",
+            "Variable": "Final request status",
             "Role": "Output",
-            "Description": "Final status distribution of simulated requests.",
+            "Description": "Success, failure, or unknown outcome.",
         },
         {
             "Variable": "Latency and duplicates",
             "Role": "Output",
-            "Description": "Modelled time and repeated processing.",
+            "Description": "Modelled total time and repeated processing.",
         },
     ])
 
     st.dataframe(variables, use_container_width=True, hide_index=True)
 
-    st.markdown("### 3. Model assumptions")
+    st.markdown("### Model assumptions")
 
     st.markdown("""
-    - Each attempt has an interruption probability selected in the sidebar.
-    - Request latency is sampled around the configured base latency.
+    - Each attempt uses the configured interruption probability.
+    - Latency is sampled around the configured base latency.
     - An interrupted request may have been processed even if its response
-      is lost.
-    - A retry without idempotency protection can create a duplicate effect
+      was lost.
+    - Retrying without idempotency protection may create duplicate effects
       in the model.
-    - The idempotency setting represents a simplified safeguard; it is not
-      a real database or server-side idempotency implementation.
-    - The experiment seed makes the generated results reproducible for the
-      same settings and software version.
+    - The idempotency setting is illustrative; it does not implement
+      a real database constraint or server-side idempotency key.
+    - A fixed seed makes the generated experiment reproducible with
+      the same settings and software version.
     """)
 
-    st.markdown("### 4. Limitations")
+    st.markdown("### Limitations")
+
+    st.warning(
+        "This is a simulation prototype, not a production cloud monitoring system."
+    )
 
     st.markdown("""
-    **This is a prototype, not a production monitoring platform.**
-
-    - It does not send real HTTP requests.
-    - It does not disconnect or modify your internet connection.
-    - It does not connect to cloud providers or measure actual server health.
-    - It does not run AI models or inspect real GPU workloads.
-    - Its latency and failure distributions are simplified assumptions.
-    - The reported success rate is a simulation result, not a service-level
+    - No real HTTP requests are sent.
+    - No real network connections are disrupted.
+    - No real cloud provider or GPU is monitored.
+    - No AI model analyses logs in this version.
+    - The failure and latency distributions are simplified assumptions.
+    - Simulated availability must not be interpreted as a real service-level
       availability guarantee.
     """)
 
-    st.markdown("### 5. Future development roadmap")
+    st.markdown("### Development roadmap")
 
     roadmap = pd.DataFrame([
         {
             "Phase": "1",
-            "Feature": "Current simulation engine",
-            "Goal": "Explore retries, interruptions, and duplicate effects.",
-            "Status": "Prototype",
+            "Feature": "Simulation engine",
+            "Goal": "Explore failures, retries, and duplicate effects.",
+            "Status": "Current prototype",
         },
         {
             "Phase": "2",
-            "Feature": "Local test API",
-            "Goal": "Send test requests to a controlled FastAPI service.",
+            "Feature": "Controlled local test API",
+            "Goal": "Send requests to a test service and record outcomes.",
             "Status": "Planned",
         },
         {
             "Phase": "3",
-            "Feature": "Persistent experiment database",
-            "Goal": "Store and compare real test runs.",
+            "Feature": "Persistent experiment storage",
+            "Goal": "Save and compare test runs.",
             "Status": "Planned",
         },
         {
             "Phase": "4",
             "Feature": "Cloud telemetry integration",
-            "Goal": "Collect authorised CPU, memory, and service metrics.",
+            "Goal": "Collect authorised resource and service metrics.",
             "Status": "Planned",
         },
         {
@@ -1170,32 +1318,28 @@ with methodology:
 
     st.markdown("### Export experiment")
 
-    full_csv = data.to_csv(index=False).encode("utf-8")
-
     st.download_button(
         "⬇ Download complete experiment (CSV)",
-        data=full_csv,
+        data=data.to_csv(index=False).encode("utf-8"),
         file_name="ghostload_full_experiment.csv",
         mime="text/csv",
         use_container_width=True,
     )
 
 
-# ------------------------- FOOTER ----------------------------
+# ============================= FOOTER ========================
 
 st.divider()
 
 st.markdown(
     """
-    <div style="text-align:center;padding:14px 0 24px;">
+    <div style="text-align:center;padding:16px 0 28px;">
         <div class="eyebrow">GHOSTLOAD / RESEARCH PROTOTYPE</div>
         <p class="small-muted">
             Cloud reliability · Failure recovery · AI workload observability
         </p>
         <p class="small-muted">
-            Demonstration software. All displayed infrastructure and request
-            metrics are simulated unless a future version explicitly
-            connects to a real test environment.
+            All infrastructure and request metrics are simulated in this version.
         </p>
     </div>
     """,
